@@ -1,18 +1,17 @@
-import base64
-import hashlib
-import re
 import time
-from urllib import parse
-
+import re
+import hashlib
+import base64
 import urllib3
-
+import configparser
+from urllib import parse
+from ffmpy3 import FFmpeg
 
 class HUYA:
-    def __init__(self, url):
+    def __init__(self,url):
         self.__url = url
 
-    @staticmethod
-    def huya_parse(url):
+    def liveurl_parse(self,url):
         a, b = url.split("?")
         r = a.split("/")
         r_m3u8 = re.sub(r".(flv|m3u8)", "", r[-1])
@@ -28,7 +27,7 @@ class HUYA:
         n = c[-1]
         return f"{a}?wsSecret={m}&wsTime={h}&u={l}&seqid={g}&{n}"
 
-    def fetch_m3u8(self):
+    def fetch(self):
         try:
             pm = urllib3.PoolManager()
             roompage_url = "https://m.huya.com/" + self.__url
@@ -39,32 +38,30 @@ class HUYA:
                               'Chrome/79.0.3945.88 Mobile Safari/537.36'
             }
             res = pm.request("GET", roompage_url, headers=headers).data.decode("utf-8")
-            live_url = re.search(r'var liveLineUrl = "(.*)";', res).group(1)
+            live_url = re.search(r'var liveLineUrl = "(.*)";', res, re.MULTILINE)
             if live_url is not None:
-                if 'replay' in live_url:
-                    r_url = {"replay": "https:" + live_url}
+                l_url = live_url.group(1)
+                if 'replay' in l_url:
+                    r_url = {"replay": "https:" + l_url}
                 else:
                     a_url = self.huya_parse(live_url)
                     b_url = self.huya_parse(live_url.replace("_2000", ""))
                     r_url = {
-                        "2000p": "https:" + a_url,
-                        "tx": "https:" + b_url,
-                        "bd": "https:" + b_url.replace("tx.hls.huya.com", "bd.hls.huya.com"),
-                        "migu-bd": "https:" + b_url.replace("tx.hls.huya.com", "migu-bd.hls.huya.com")
+                    "2000p": "https:" + a_url,
+                    "tx": "https:" + b_url,
+                    "bd": "https:" + b_url.replace("tx.hls.huya.com", "bd.hls.huya.com"),
+                    "migu-bd": "https:" + b_url.replace("tx.hls.huya.com", "migu-bd.hls.huya.com")
                     }
             else:
-                raise Exception("找不到在线状态")
+                raise Exception("live_url解析失败")
         except Exception as e:
             print(e)
             return False
         return r_url["migu-bd"]
 
-
-'''def get_url(room):
-    try:
-        getm3u8 = HUYA(room)
-        return getm3u8.fetch_m3u8()
-    except Exception as e:
-        print(e)
-        print("get_url")
-        return False'''
+def start_ffmpeg(url,id):
+    cf = configparser.ConfigParser()
+    cf.read("./config.ini")
+    ff = FFmpeg(inputs={url: None},
+                outputs={f'{time.strftime("%H-%M")} {cf.get("Host",id)}.flv': '-c:v copy -c:a aac'})
+    ff.run()
