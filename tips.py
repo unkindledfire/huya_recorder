@@ -4,6 +4,7 @@ import configparser
 import re
 import win32api
 import win32con
+import winsound
 
 
 pm = urllib3.PoolManager()
@@ -24,7 +25,8 @@ def check(id,val):
         live_status = re.search(r'ISLIVE = true', res, re.MULTILINE)
         if live_status is not None:
             if live == 0:
-                win32api.MessageBox(0, "该主播上线了", "TIPs",win32con.MB_OK)
+                winsound.MessageBeep(-1)
+                win32api.MessageBox(0, "该主播上线了", "TIPs", win32con.MB_OK)
             live = 1
             pass
         else:
