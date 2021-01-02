@@ -25,7 +25,7 @@ def check(id,val):
         live_status = re.search(r'ISLIVE = true', res, re.MULTILINE)
         if live_status is not None:
             if live == 0:
-                winsound.MessageBeep(-1)
+                winsound.PlaySound('o.wav',winsound.SND_ALIAS)
                 win32api.MessageBox(0, "该主播上线了", "TIPs", win32con.MB_OK)
             live = 1
             pass
